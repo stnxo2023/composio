@@ -926,16 +926,22 @@ class Actions(Collection[ActionModel]):
 
         if limit is not None:
             queries["limit"] = str(limit)
+
         response = self._raise_if_required(
             response=self.client.http.get(
-                url=str(self.endpoint(queries=queries)),
+                url=str(
+                    self.endpoint(
+                        queries=queries,
+                    )
+                )
             )
         )
+
         response_json = response.json()
         items = [self.model(**action) for action in response_json.get("items")]
         if len(actions) > 0:
-            required_triggers = [t.cast(Action, action).name for action in actions]
-            items = [item for item in items if item.name in required_triggers]
+            required = [t.cast(Action, action).name for action in actions]
+            items = [item for item in items if item.name in required]
 
         if len(tags) > 0:
             required_tags = [tag.app if isinstance(tag, Tag) else tag for tag in tags]
@@ -975,14 +981,9 @@ class Actions(Collection[ActionModel]):
         :return: A dictionary containing the response from the executed action.
         """
         if action.is_local:
-            return self.client.local.execute_action(
-                action=action,
-                request_data=params,
-            )
+            return self.client.local.execute_action(action=action, request_data=params)
 
-        actions = self.get(
-            actions=[action],
-        )
+        actions = self.get(actions=[action])
         if len(actions) == 0:
             raise ComposioClientError(f"Action {action} not found")
 
@@ -1009,15 +1010,20 @@ class Actions(Collection[ActionModel]):
                         modified_params[param] = base64.b64encode(file_content).decode(
                             "utf-8"
                         )
-            elif file_uploadable and isinstance(value, str) and os.path.isfile(value):
-                with open(value, "rb") as file:
-                    file_content = file.read()
-                encoded_data = base64.b64encode(file_content).decode("utf-8")
-                encoded_data_with_filename = {
-                    "name": os.path.basename(value),
-                    "content": encoded_data,
-                }
-                modified_params[param] = encoded_data_with_filename
+            elif file_uploadable and isinstance(value, str):
+                if os.path.isfile(value):
+                    with open(value, "rb") as file:
+                        file_content = file.read()
+                    encoded_data = base64.b64encode(file_content).decode("utf-8")
+                    encoded_data_with_filename = {
+                        "name": os.path.basename(value),
+                        "content": encoded_data,
+                    }
+                    modified_params[param] = encoded_data_with_filename
+                elif value == "":
+                    pass
+                else:
+                    return {"error": f"File with path {value} not found"}
             else:
                 modified_params[param] = value
 
