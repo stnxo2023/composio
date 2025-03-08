@@ -16,6 +16,8 @@ export class LangGraphToolSet extends BaseComposioToolSet {
       apiKey?: Optional<string>;
       baseUrl?: Optional<string>;
       entityId?: string;
+      connectedAccountIds?: Record<string, string>;
+      allowTracing?: boolean;
     } = {}
   ) {
     super({
@@ -23,6 +25,8 @@ export class LangGraphToolSet extends BaseComposioToolSet {
       baseUrl: config.baseUrl || COMPOSIO_BASE_URL,
       entityId: config.entityId || LangGraphToolSet.DEFAULT_ENTITY_ID,
       runtime: LangGraphToolSet.FRAMEWORK_NAME,
+      connectedAccountIds: config.connectedAccountIds,
+      allowTracing: config.allowTracing || false,
     });
   }
 }
