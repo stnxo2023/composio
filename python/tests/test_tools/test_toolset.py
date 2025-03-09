@@ -3,6 +3,7 @@ Test composio toolset.
 """
 
 import logging
+import os
 import re
 import typing as t
 from unittest import mock
@@ -10,8 +11,12 @@ from unittest import mock
 import pytest
 from pydantic import BaseModel, Field
 
-from composio import Action, App
-from composio.exceptions import ApiKeyNotProvidedError, ComposioSDKError
+from composio import Action, App, Trigger
+from composio.exceptions import (
+    ApiKeyNotProvidedError,
+    ComposioSDKError,
+    ConnectedAccountNotFoundError,
+)
 from composio.tools.base.abs import action_registry, tool_registry
 from composio.tools.base.runtime import action as custom_action
 from composio.tools.local.filetool.tool import Filetool, FindFile
@@ -35,6 +40,36 @@ def test_get_schemas() -> None:
         )
         > 0
     )
+
+
+def test_get_trigger_config_scheme() -> None:
+    """Test `ComposioToolSet.get_trigger_config_scheme` method."""
+    toolset = ComposioToolSet()
+    assert (
+        toolset.get_trigger_config_scheme(trigger=Trigger.GMAIL_NEW_GMAIL_MESSAGE).title
+        == "GmailNewMessageConfigSchema"
+    )
+
+
+def test_delete_trigger() -> None:
+    """Test `ComposioToolSet.delete_trigger` method."""
+    api_key = os.getenv("COMPOSIO_API_KEY")
+    toolset = ComposioToolSet(api_key=api_key)
+
+    connected_account_id: str
+    for account in toolset.get_connected_accounts():
+        if account.appName == "gmail":
+            connected_account_id = account.id
+            break
+
+    enabled_trigger = toolset.client.triggers.enable(
+        name="GMAIL_NEW_GMAIL_MESSAGE",
+        connected_account_id=connected_account_id,
+        config={"interval": 1, "userId": "me", "labelIds": "INBOX"},
+    )
+
+    assert enabled_trigger["triggerId"] is not None
+    assert toolset.delete_trigger(id=enabled_trigger["triggerId"]) is True
 
 
 def test_find_actions_by_tags() -> None:
@@ -258,6 +293,22 @@ class TestProcessors:
         assert postprocessor_called
 
 
+def test_entity_id_validation_in_check_connected_accounts() -> None:
+    """Test whether check_connected_account raises error with invalid entity_id"""
+    toolset = ComposioToolSet()
+    with pytest.raises(
+        ConnectedAccountNotFoundError,
+        match=(
+            "No connected account found for app `GMAIL`; "
+            "Run `composio add gmail` to fix this"
+        ),
+    ):
+        toolset.check_connected_account(
+            action=Action.GMAIL_FETCH_EMAILS,
+            entity_id="some_very_random_obviously_wrong_entity_id",
+        )
+
+
 def test_check_connected_accounts_flag() -> None:
     """Test the `check_connected_accounts` flag on `get_tools()`."""
 
@@ -331,6 +382,7 @@ def test_execute_action_param_serialization() -> None:
         connected_account_id=None,
         text=None,
         session_id=mock.ANY,
+        allow_tracing=False,
     )
 
 
