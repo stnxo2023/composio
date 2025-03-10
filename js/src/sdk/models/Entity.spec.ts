@@ -13,8 +13,11 @@ describe("Entity class tests", () => {
 
   beforeAll(() => {
     entity = new Entity(backendClient, "default");
-    connectedAccounts = new ConnectedAccounts(backendClient);
-    _integrations = new Integrations(backendClient);
+    connectedAccounts = new ConnectedAccounts(
+      backendClient,
+      backendClient.instance
+    );
+    _integrations = new Integrations(backendClient, backendClient.instance);
   });
 
   it("should create an Entity instance with 'default' id", () => {
@@ -41,6 +44,18 @@ describe("Entity class tests", () => {
     const app = "github";
     const connection = await entity.getConnection({ app });
     expect(connection?.appUniqueId).toBe(app);
+  });
+
+  it("get connection for rand", async () => {
+    const entity2 = new Entity(backendClient, "ckemvy" + Date.now());
+    let hasError = false;
+    try {
+      const connection = await entity2.getConnection({ app: "gmail" });
+      expect(connection?.appUniqueId).toBe("gmail");
+    } catch (error) {
+      hasError = true;
+    }
+    expect(hasError).toBe(true);
   });
 
   it("execute action", async () => {

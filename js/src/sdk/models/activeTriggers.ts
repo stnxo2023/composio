@@ -1,3 +1,4 @@
+import { Client } from "@hey-api/client-axios";
 import { z } from "zod";
 import apiClient from "../client/client";
 import {
@@ -8,7 +9,7 @@ import {
 import { CEG } from "../utils/error";
 import { TELEMETRY_LOGGER } from "../utils/telemetry";
 import { TELEMETRY_EVENTS } from "../utils/telemetry/events";
-import { BackendClient } from "./backendClient";
+import { AxiosBackendClient } from "./backendClient";
 
 export type TriggerItemParam = z.infer<typeof ZTriggerItemParam>;
 export type GetActiveTriggersData = z.infer<typeof ZActiveTriggersQuery>;
@@ -16,10 +17,12 @@ export type TriggerItemRes = z.infer<typeof ZActiveTriggerItemRes>;
 export type TriggerChangeResponse = { status: string };
 export class ActiveTriggers {
   // Remove this as we might not need it
-  private backendClient: BackendClient;
+  private backendClient: AxiosBackendClient;
+  private client: Client;
   private fileName: string = "js/src/sdk/models/activeTriggers.ts";
-  constructor(backendClient: BackendClient) {
+  constructor(backendClient: AxiosBackendClient, client: Client) {
     this.backendClient = backendClient;
+    this.client = client;
   }
 
   /** Missing type */
@@ -41,6 +44,7 @@ export class ActiveTriggers {
     try {
       const parsedData = ZTriggerItemParam.parse({ triggerId });
       const { data } = await apiClient.triggers.getActiveTriggers({
+        client: this.client,
         query: {
           triggerIds: `${parsedData.triggerId}`,
         },
@@ -70,6 +74,7 @@ export class ActiveTriggers {
     try {
       const parsedData = ZActiveTriggersQuery.parse(data);
       const { data: response } = await apiClient.triggers.getActiveTriggers({
+        client: this.client,
         query: parsedData,
       });
 
@@ -95,6 +100,7 @@ export class ActiveTriggers {
     try {
       const parsedData = ZTriggerItemParam.parse(data);
       await apiClient.triggers.switchTriggerInstanceStatus({
+        client: this.client,
         path: { triggerId: parsedData.triggerId },
         body: {
           enabled: true,
@@ -123,6 +129,7 @@ export class ActiveTriggers {
     try {
       const parsedData = ZTriggerItemParam.parse(data);
       await apiClient.triggers.switchTriggerInstanceStatus({
+        client: this.client,
         path: parsedData,
         body: {
           enabled: false,

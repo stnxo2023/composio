@@ -180,7 +180,7 @@ def _wrap(
         type(inflection.camelize(f.__name__), (WrappedAction,), {}),
     )
     cls.__doc__ = f.__doc__
-    cls.description = f.__doc__  # type: ignore
+    cls.description = f.__doc__ or f.__name__  # type: ignore
 
     # Normalize app name
     toolname = toolname.upper()
@@ -245,11 +245,17 @@ def _parse_docstring(
             continue
 
         if ":param" in description:
-            param, description = description.replace(":param ", "").split(":")
+            param, description = description.replace(":param ", "").split(
+                ":",
+                maxsplit=1,
+            )
             params[param.lstrip().rstrip()] = description.lstrip().rstrip()
 
         if ":return" in description:
-            param, description = description.replace(":return ", "").split(":")
+            param, description = description.replace(":return ", "").split(
+                ":",
+                maxsplit=1,
+            )
             returns = (param.lstrip().strip(), description.lstrip().rstrip())
 
     return header, params, returns

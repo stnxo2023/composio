@@ -7,7 +7,16 @@ import typing_extensions as te
 from pydantic import BaseModel, Field
 
 from composio.tools.base.abs import tool_registry
-from composio.tools.base.runtime import InvalidRuntimeAction, action
+from composio.tools.base.runtime import InvalidRuntimeAction, _parse_docstring, action
+
+
+def test_parse_docstrings() -> None:
+    _parse_docstring(
+        """
+Some Module                     
+:param names: string, separated by :
+"""
+    )
 
 
 def test_pydantic_model_action() -> None:
@@ -80,7 +89,7 @@ def test_annotated_args() -> None:
         "type": "object",
     }
 
-    assert square.response.schema().get("properties").get("result") == {  # type: ignore
+    assert square.response.schema().get("properties").get("data").get("properties").get("result") == {  # type: ignore
         "default": None,
         "description": "Square of a number",
         "title": "Result",
